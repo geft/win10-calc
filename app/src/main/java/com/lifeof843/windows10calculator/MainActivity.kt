@@ -9,6 +9,7 @@ import com.lifeof843.windows10calculator.databinding.ActivityMainBinding
 import java.math.BigDecimal
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import kotlin.math.sqrt
 
 class MainActivity : Activity() {
 
@@ -24,9 +25,9 @@ class MainActivity : Activity() {
 
         setContentView(binding.root)
 
-        binding.buttonPercentage.setOnClickListener { clear() }
-        binding.buttonCe.setOnClickListener { clear() }
-        binding.buttonC.setOnClickListener { clear() }
+        binding.buttonPercentage.setOnClickListener { doPercentage() }
+        binding.buttonCe.setOnClickListener { clearCurrent() }
+        binding.buttonC.setOnClickListener { clearAll() }
         binding.buttonBackspace.setOnClickListener { backspace() }
         binding.button0.setOnClickListener { insertNum(0) }
         binding.button1.setOnClickListener { insertNum(1) }
@@ -44,6 +45,10 @@ class MainActivity : Activity() {
         binding.buttonSubtract.setOnClickListener { operate(Operator.SUBTRACT) }
         binding.buttonAdd.setOnClickListener { operate(Operator.ADD) }
         binding.buttonEqual.setOnClickListener { onEqual() }
+        binding.buttonReciprocal.setOnClickListener { doReciprocal() }
+        binding.buttonSquare.setOnClickListener { doSquare() }
+        binding.buttonRoot.setOnClickListener { doRoot() }
+        binding.buttonSign.setOnClickListener { changeSign() }
     }
 
     private fun operate(operator: Operator) {
@@ -55,10 +60,19 @@ class MainActivity : Activity() {
         if (operand1 == null) {
             operand = getCurrentNumber()
         } else {
-            val output = operator.operation.invoke(operand1, operand2)
-            binding.textLabel.text = formatLabel(output.toString())
-            logState(operand1, operand2, output)
-            operand = getCurrentNumber()
+            if (operand2 == BigDecimal.ZERO && operator == Operator.DIVIDE) {
+                binding.textLabel.text = "Cannot divide by zero."
+            } else {
+                try {
+                    val output = operator.operation.invoke(operand1, operand2)
+                    binding.textLabel.text = formatLabel(output.toString())
+                    logState(operand1, operand2, output)
+                    operand = getCurrentNumber()
+                } catch (e: ArithmeticException) {
+                    Log.e(this.javaClass.name, e.message, e)
+                    binding.textLabel.text = "Invalid operation"
+                }
+            }
         }
     }
 
@@ -77,13 +91,18 @@ class MainActivity : Activity() {
 
     private fun onEqual() {
         operator?.let { operate(it) }
+        operand = null
     }
 
     private fun getCurrentNumber() = binding.textLabel.text.toString().toBigDecimal()
 
-    private fun clear() {
+    private fun clearAll() {
         operand = null
         operator = null
+        binding.textLabel.text = "0"
+    }
+
+    private fun clearCurrent() {
         binding.textLabel.text = "0"
     }
 
@@ -114,7 +133,7 @@ class MainActivity : Activity() {
 
     private fun formatLabel(label: String): String {
         if (label.contains(".")) {
-            return label
+            return label.toBigDecimal().stripTrailingZeros().toPlainString()
         }
 
         val newLabel = label.replace(",", "")
@@ -123,5 +142,38 @@ class MainActivity : Activity() {
         decimalFormatSymbols.groupingSeparator = ','
         decimalFormat.decimalFormatSymbols = decimalFormatSymbols
         return decimalFormat.format(newLabel.toBigDecimal().longValueExact())
+    }
+
+    private fun doReciprocal() {
+        operand = BigDecimal.ONE
+        operate(Operator.DIVIDE)
+    }
+
+    private fun doRoot() {
+        val current = getCurrentNumber()
+        if (current.signum() == -1) {
+            binding.textLabel.text = "Invalid input"
+        } else {
+            val output = sqrt(getCurrentNumber().toDouble())
+            binding.textLabel.text = formatLabel(output.toString())
+        }
+    }
+
+    private fun doSquare() {
+        val current = getCurrentNumber()
+        val output = current * current
+        binding.textLabel.text = formatLabel(output.toString())
+    }
+
+    private fun doPercentage() {
+        val operand = this.operand
+        val output = if (operand == null) BigDecimal.ZERO
+        else operand * 0.01.toBigDecimal() * getCurrentNumber()
+        binding.textLabel.text = formatLabel(output.toString())
+    }
+
+    private fun changeSign() {
+        val output = getCurrentNumber().negate()
+        binding.textLabel.text = formatLabel(output.toString())
     }
 }

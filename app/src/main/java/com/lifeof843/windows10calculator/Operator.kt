@@ -8,5 +8,5 @@ enum class Operator(
     ADD     ( { A, B -> A + B } ),
     SUBTRACT( { A, B -> A - B } ),
     MULTIPLY( { A, B -> A * B } ),
-    DIVIDE  ( { A, B -> A / B } )
+    DIVIDE  ( { A, B -> A.divide(B, 8, java.math.RoundingMode.HALF_EVEN) } )
 }
